@@ -115,7 +115,7 @@ img {
 .w3l-signinform{
     padding: 40px 40px;
     min-height: 100vh;
-    background: url(../images/1.jpg) no-repeat center;
+    background: url(../../images/1.jpg) no-repeat center;
     background-size: cover;
     -webkit-background-size: cover;
     -o-background-size: cover;
