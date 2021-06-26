@@ -1,6 +1,7 @@
 package HttpServer;
 
 import com.sun.net.httpserver.HttpServer;
+import jdk.internal.util.xml.impl.Input;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -31,17 +32,13 @@ public class ServerThread extends Thread{
             sendMsg(ous, user);
             // 获取客户端输入的用户名
             String userName = readMsg(ins);
-            System.out.println(userName);
             // 发送要求密码信息给客户端
             String pwd = "Please input your password:";
             sendMsg(ous,  pwd);
             // 获取客户端输入的密码
             String pass = readMsg(ins);
-            System.out.println(pass);
-
             // 登录验证
             boolean flag = loginCheck(userName, pass);
-            System.out.println(flag);
             // 校验不通过时，循环校验
             while (!flag) {
                 msg="NO";
@@ -65,7 +62,7 @@ public class ServerThread extends Thread{
             //发送登录成功的结果给客户端
             msg="OK\r\n";
             sendMsg(ous, msg);
-            // 校验成功后：开始聊天
+            // 校验成功
             msg = "------successfully connected------";
             sendMsg(ous, msg);
         } catch (Exception e) {
@@ -77,8 +74,13 @@ public class ServerThread extends Thread{
     public void run() {
         userLogin();
         try {
-            Thread.sleep(500);
+            Thread.sleep(5*1000);
             int size = ins.available();
+            while (size == 0) {
+                Thread.sleep(3*1000);
+                size = ins.available();
+            }
+            System.out.println(size);
             byte[] b = new byte[size];
             ins.read(b);
             String request = new String(b);
@@ -87,6 +89,7 @@ public class ServerThread extends Thread{
             //解析请求方式、uri、协议，获取uri
             String typeUriHttp = request.substring(0,request.indexOf("\r\n"));
             System.out.println(typeUriHttp);
+            String methods = typeUriHttp.split(" ")[0];
             String uri = typeUriHttp.split(" ")[1];
             System.out.println((uri));
             //简化处理响应头content-Type
@@ -101,31 +104,76 @@ public class ServerThread extends Thread{
 
             //创建HTTP响应结果
             //创建响应协议、状态
-            String httpStatus = "HTTP/1.1 200 OK\r\n";
-            //创建响应头
-            String responseHeader = "Content-Type:" + contentType + "\r\n\r\n";
-            InputStream in = HttpServer.class.getResourceAsStream("/Resources" + uri);
-            OutputStream socketOut = socket.getOutputStream();
-            //发送响应协议、状态码及响应头、正文
-            System.out.println(httpStatus);
-            System.out.println(responseHeader);
-            socketOut.write(httpStatus.getBytes());
-            socketOut.write(responseHeader.getBytes());
-            int len = 0;
-            byte[] bytes = new byte[1024];
+            //405
+            if (methods.equals("delete") || methods.equals("DELETE")) {
+                String httpStatus = "HTTP/1.1 405 Method Not Allowed\r\n";
+                OutputStream socketOut = socket.getOutputStream();
+                socketOut.write(httpStatus.getBytes());
+                Thread.sleep(1000);
+            }else {
+                String responseHeader = "Content-Type:" + contentType + "\r\n\r\n";
+                OutputStream socketOut = socket.getOutputStream();
 
-            while((len = in.read(bytes)) != -1)
-            {
-                socketOut.write(bytes,0, len);
+                //演示500 Internal Server Error
+                if (uri.indexOf("500.txt") != -1) {
+                    String httpStatus = "HTTP/1.1 500 Internal Server Error\r\n";
+                    socketOut.write(httpStatus.getBytes());
+                    socketOut.write(responseHeader.getBytes());
+                } else {
+                    if (HttpServer.class.getResourceAsStream("/Resources" + uri) == null) {
+                        System.out.println("uri not found");
+                        if (HttpServer.class.getResourceAsStream("/NewResources" + uri) != null) {
+                            System.out.println("uri found");
+
+                            if (uri.indexOf("301.txt") != -1) {
+                                //演示301 moved permanently
+                                System.out.println("301 found");
+                                String httpStatus = "HTTP/1.1 301 Move permanently\r\n";
+                                String newUri = "/NewResources" + uri + "\r\n";
+                                socketOut.write(httpStatus.getBytes());
+                                socketOut.write(responseHeader.getBytes());
+                                socketOut.write(newUri.getBytes());
+                                InputStream in = HttpServer.class.getResourceAsStream("/NewResources" + uri);
+                                writeFromFile(socketOut, in);
+                            }
+                            if (uri.indexOf("302.txt") != -1) {
+                                //演示302 Found
+                                String httpStatus = "HTTP/1.1 302 Found\r\n";
+                                socketOut.write(httpStatus.getBytes());
+                                socketOut.write(responseHeader.getBytes());
+                                InputStream in = HttpServer.class.getResourceAsStream("/NewResources" + uri);
+                                writeFromFile(socketOut, in);
+                            }
+                            if (uri.indexOf("304.txt") != -1) {
+                                //演示304 Not Modified
+                                String httpStatus = "HTTP/1.1 304 Not Modified\r\n";
+                                socketOut.write(httpStatus.getBytes());
+                                socketOut.write(responseHeader.getBytes());
+                            }
+                        } else {
+                            String httpStatus = "HTTP/1.1 404 Not Found\r\n";
+                            socketOut.write(httpStatus.getBytes());
+                            socketOut.write(responseHeader.getBytes());
+                        }
+                    } else{
+                        String httpStatus = "HTTP/1.1 200 OK\r\n";
+                        //创建响应头
+                        InputStream in = HttpServer.class.getResourceAsStream("/Resources" + uri);
+                        //发送响应协议、状态码及响应头、正文
+                        //System.out.println(httpStatus);
+                        //System.out.println(responseHeader);
+                        socketOut.write(httpStatus.getBytes());
+                        socketOut.write(responseHeader.getBytes());
+                        writeFromFile(socketOut, in);
+                    }
+                }
+
             }
-            Thread.sleep(1000);
             //socket.close();
         } catch (Exception e) {
             System.out.println("The client was closed unexpectedly");
             e.printStackTrace();
         }
-
-
         //有异常后统一将流关闭
         try {
             ins.close();
@@ -140,6 +188,17 @@ public class ServerThread extends Thread{
 
     }
 
+    public void writeFromFile(OutputStream socketOut, InputStream in) throws IOException, InterruptedException {
+
+        int len = 0;
+        byte[] bytes = new byte[1024];
+
+        while((len = in.read(bytes)) != -1)
+        {
+            socketOut.write(bytes,0, len);
+        }
+        Thread.sleep(1000);
+    }
     private boolean loginCheck(String userName, String pass) {
         //这里可以调用数据库？
         if(userName.equals("root") && pass.equals("123456"))

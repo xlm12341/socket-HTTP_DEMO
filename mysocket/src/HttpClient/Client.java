@@ -40,7 +40,6 @@ public class Client {
             sendMsg(ous, pwd + "\r\n");
             // 获取验证结果
             String result = readMsg(ins);
-            System.out.println(result);
             //如果登录失败，则接受服务器端发过来的提示消息
             while(!result.equals("OK")){
                 //接收"Fail to connect server......"
@@ -59,9 +58,9 @@ public class Client {
                 //接受密码请求"Please input your password:"
                 message = readMsg(ins);
                 System.out.println(message);
-                //发送密码给服务器
+                //
                 pwd = scanner.nextLine();
-                // 发送用户名
+                // 发送密码给服务器
                 sendMsg(ous, pwd + "\r\n");
                 //接收服务器返的信息
                 result = readMsg(ins);
@@ -119,6 +118,46 @@ public class Client {
             //socket = new Socket(host,port);
             //创建http请求  第一行 注意空格
             StringBuffer sb = new StringBuffer("GET "+uri+" HTTP/1.1\r\n");
+            //构建请求头
+            sb.append("Accept: */*\r\n");
+            sb.append("Accept-Language: zh-cn\r\n");
+            sb.append("Accept-Encoding: gzip, deflate\r\n");
+            sb.append("User-Agent: HTTPClient\r\n");
+            sb.append("Host: localhost:8080\r\n");
+            sb.append("Connection: Keep-Alive\r\n");
+            //发送http请求
+            OutputStream socketOut = socket.getOutputStream();
+            socketOut.write(sb.toString().getBytes());
+            Thread.sleep(2000);
+
+            //接受http请求
+            InputStream socketIn = socket.getInputStream();
+            int size = socketIn.available();
+            byte[] b = new byte[size];
+            socketIn.read(b);
+            //将相应结果输出到控制台 模拟浏览器界面
+            System.out.println(new String(b));
+        } catch (IOException e) {
+            e.printStackTrace();
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+        finally {
+            try {
+                socket.close();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+    }
+
+    //delete方式访问http server
+    public static void doDelete(Socket socket,String uri){
+        //Socket socket = null;
+        try {
+            //socket = new Socket(host,port);
+            //创建http请求  第一行 注意空格
+            StringBuffer sb = new StringBuffer("DELETE "+uri+" HTTP/1.1\r\n");
             //构建请求头
             sb.append("Accept: */*\r\n");
             sb.append("Accept-Language: zh-cn\r\n");
