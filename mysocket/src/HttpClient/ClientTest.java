@@ -31,6 +31,9 @@ public class ClientTest {
         if (methods.equals("delete") || methods.equals("DELETE")) {
             Client.doDelete(socketReturned, uri);
         }
+        if (methods.equals("post") || methods.equals("POST")) {
+            Client.doPost(socketReturned, uri);
+        }
 
     }
 }
