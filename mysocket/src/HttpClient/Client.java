@@ -1,8 +1,7 @@
 package HttpClient;
 
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
+import java.awt.*;
+import java.io.*;
 import java.net.Socket;
 import java.util.Scanner;
 
@@ -68,8 +67,8 @@ public class Client {
             //如果登录成功，则可以开始发送信息了
             if (result.equals("OK")) {
                 //接受------successfully connected------
-                String message = readMsg(ins);
-                System.out.println(message);
+             //   String message = readMsg(ins);
+            //    System.out.println(message);
                 return client;
 /*                // 发送消息线程
                 new Thread() {
@@ -117,7 +116,7 @@ public class Client {
         try {
             //socket = new Socket(host,port);
             //创建http请求  第一行 注意空格
-            StringBuffer sb = new StringBuffer("GET "+uri+" HTTP/1.1\r\n");
+            StringBuffer sb = new StringBuffer("GET "+uri+" HTTP/1.jpg.1.jpg\r\n");
             //构建请求头
             sb.append("Accept: */*\r\n");
             sb.append("Accept-Language: zh-cn\r\n");
@@ -130,13 +129,26 @@ public class Client {
             socketOut.write(sb.toString().getBytes());
             Thread.sleep(2000);
 
+
             //接受http请求
             InputStream socketIn = socket.getInputStream();
             int size = socketIn.available();
-            byte[] b = new byte[size];
-            socketIn.read(b);
+            System.out.println(size);
+            byte[] b = new byte[46];
+            socketIn.read(b, 0, 46);
+            //         byte[] b2 = new byte[size-43];
+            //       socketIn.read(b2);
+            File file = new File("D:\\code repository\\socket\\socket-HTTP_DEMO\\mysocket\\src\\clientResources" + uri);
+            BufferedOutputStream out = new BufferedOutputStream(new FileOutputStream(file));  //你要保存在哪个目录下面
+            int i;
+            while ((i = socketIn.read()) != -1) {
+                out.write(i);
+            }
+            out.flush();
+            out.close();
             //将相应结果输出到控制台 模拟浏览器界面
             System.out.println(new String(b));
+
         } catch (IOException e) {
             e.printStackTrace();
         } catch (InterruptedException e) {
@@ -157,7 +169,7 @@ public class Client {
         try {
             //socket = new Socket(host,port);
             //创建http请求  第一行 注意空格
-            StringBuffer sb = new StringBuffer("DELETE "+uri+" HTTP/1.1\r\n");
+            StringBuffer sb = new StringBuffer("DELETE "+uri+" HTTP/1.jpg.1.jpg\r\n");
             //构建请求头
             sb.append("Accept: */*\r\n");
             sb.append("Accept-Language: zh-cn\r\n");
@@ -185,6 +197,7 @@ public class Client {
         finally {
             try {
                 socket.close();
+
             } catch (IOException e) {
                 e.printStackTrace();
             }

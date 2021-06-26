@@ -63,8 +63,8 @@ public class ServerThread extends Thread{
             msg="OK\r\n";
             sendMsg(ous, msg);
             // 校验成功
-            msg = "------successfully connected------";
-            sendMsg(ous, msg);
+           // msg = "successfully connected";
+          //  sendMsg(ous, msg);
         } catch (Exception e) {
             System.out.println("The client was closed unexpectedly");
             e.printStackTrace();
@@ -80,7 +80,7 @@ public class ServerThread extends Thread{
                 Thread.sleep(3*1000);
                 size = ins.available();
             }
-            System.out.println(size);
+        //  System.out.println(size);
             byte[] b = new byte[size];
             ins.read(b);
             String request = new String(b);
@@ -106,7 +106,7 @@ public class ServerThread extends Thread{
             //创建响应协议、状态
             //405
             if (methods.equals("delete") || methods.equals("DELETE")) {
-                String httpStatus = "HTTP/1.1 405 Method Not Allowed\r\n";
+                String httpStatus = "HTTP/1.jpg.1.jpg 405 Method Not Allowed\r\n";
                 OutputStream socketOut = socket.getOutputStream();
                 socketOut.write(httpStatus.getBytes());
                 Thread.sleep(1000);
@@ -116,7 +116,7 @@ public class ServerThread extends Thread{
 
                 //演示500 Internal Server Error
                 if (uri.indexOf("500.txt") != -1) {
-                    String httpStatus = "HTTP/1.1 500 Internal Server Error\r\n";
+                    String httpStatus = "HTTP/1.jpg.1.jpg 500 Internal Server Error\r\n";
                     socketOut.write(httpStatus.getBytes());
                     socketOut.write(responseHeader.getBytes());
                 } else {
@@ -128,7 +128,7 @@ public class ServerThread extends Thread{
                             if (uri.indexOf("301.txt") != -1) {
                                 //演示301 moved permanently
                                 System.out.println("301 found");
-                                String httpStatus = "HTTP/1.1 301 Move permanently\r\n";
+                                String httpStatus = "HTTP/1.jpg.1.jpg 301 Move permanently\r\n";
                                 String newUri = "/NewResources" + uri + "\r\n";
                                 socketOut.write(httpStatus.getBytes());
                                 socketOut.write(responseHeader.getBytes());
@@ -138,7 +138,7 @@ public class ServerThread extends Thread{
                             }
                             if (uri.indexOf("302.txt") != -1) {
                                 //演示302 Found
-                                String httpStatus = "HTTP/1.1 302 Found\r\n";
+                                String httpStatus = "HTTP/1.jpg.1.jpg 302 Found\r\n";
                                 socketOut.write(httpStatus.getBytes());
                                 socketOut.write(responseHeader.getBytes());
                                 InputStream in = HttpServer.class.getResourceAsStream("/NewResources" + uri);
@@ -146,17 +146,17 @@ public class ServerThread extends Thread{
                             }
                             if (uri.indexOf("304.txt") != -1) {
                                 //演示304 Not Modified
-                                String httpStatus = "HTTP/1.1 304 Not Modified\r\n";
+                                String httpStatus = "HTTP/1.jpg.1.jpg 304 Not Modified\r\n";
                                 socketOut.write(httpStatus.getBytes());
                                 socketOut.write(responseHeader.getBytes());
                             }
                         } else {
-                            String httpStatus = "HTTP/1.1 404 Not Found\r\n";
+                            String httpStatus = "HTTP/1.jpg.1.jpg 404 Not Found\r\n";
                             socketOut.write(httpStatus.getBytes());
                             socketOut.write(responseHeader.getBytes());
                         }
                     } else{
-                        String httpStatus = "HTTP/1.1 200 OK\r\n";
+                        String httpStatus = "HTTP/1.jpg.1.jpg 200 OK\r\n";
                         //创建响应头
                         InputStream in = HttpServer.class.getResourceAsStream("/Resources" + uri);
                         //发送响应协议、状态码及响应头、正文
@@ -164,6 +164,8 @@ public class ServerThread extends Thread{
                         //System.out.println(responseHeader);
                         socketOut.write(httpStatus.getBytes());
                         socketOut.write(responseHeader.getBytes());
+                        int len = httpStatus.getBytes().length + responseHeader.getBytes().length;
+                        System.out.println("server head len"+len);
                         writeFromFile(socketOut, in);
                     }
                 }
@@ -197,7 +199,7 @@ public class ServerThread extends Thread{
         {
             socketOut.write(bytes,0, len);
         }
-        Thread.sleep(1000);
+        //Thread.sleep(1000);
     }
     private boolean loginCheck(String userName, String pass) {
         //这里可以调用数据库？
