@@ -1,15 +1,12 @@
 package HttpClient;
 
+import javax.xml.crypto.dsig.keyinfo.RetrievalMethod;
 import java.awt.*;
 import java.io.*;
 import java.net.Socket;
 import java.util.Scanner;
 
-/**
- * Author:varCode
- * Date:2019-03-22 22:20
- * Description:<描述>
- */
+
 public class Client {
 
     public Socket initClient() {
@@ -39,6 +36,8 @@ public class Client {
             sendMsg(ous, pwd + "\r\n");
             // 获取验证结果
             String result = readMsg(ins);
+            System.out.println(result);
+
             //如果登录失败，则接受服务器端发过来的提示消息
             while(!result.equals("OK")){
                 //接收"Fail to connect server......"
@@ -111,7 +110,7 @@ public class Client {
 
 
     //实现get方式访问http server
-    public static void doGet(Socket socket,String uri){
+    public static Socket doGet(Socket socket,String uri){
         //Socket socket = null;
         try {
             //socket = new Socket(host,port);
@@ -123,48 +122,51 @@ public class Client {
             sb.append("Accept-Encoding: gzip, deflate\r\n");
             sb.append("User-Agent: HTTPClient\r\n");
             sb.append("Host: localhost:8080\r\n");
-            sb.append("Connection: Keep-Alive\r\n");
+            //sb.append("Connection: Keep-Alive\r\n");
+            sb.append("Connection: Close\r\n");
+            //Connection: Close
             //发送http请求
             OutputStream socketOut = socket.getOutputStream();
             socketOut.write(sb.toString().getBytes());
-            Thread.sleep(2000);
+            Thread.sleep(3000);
 
 
             //接受http请求
             InputStream socketIn = socket.getInputStream();
             int size = socketIn.available();
             System.out.println(size);
-            byte[] b = new byte[46];
-            socketIn.read(b, 0, 46);
+
+            int len = 0;
+            len = socketIn.read();
+            System.out.println("head len " + len);
+            byte[] b = new byte[len];
+            socketIn.read(b);
             //         byte[] b2 = new byte[size-43];
             //       socketIn.read(b2);
-            File file = new File("D:\\code repository\\socket\\socket-HTTP_DEMO\\mysocket\\src\\clientResources" + uri);
+            //将相应结果输出到控制台 模拟浏览器界面
+            System.out.println(new String(b));
+            File file = new File("D:\\code repository\\socket\\socket-HTTP_DEMO\\mysocket\\src\\clientResources\\images" + uri);
             BufferedOutputStream out = new BufferedOutputStream(new FileOutputStream(file));  //你要保存在哪个目录下面
             int i;
             while ((i = socketIn.read()) != -1) {
+//                System.out.println(i);
                 out.write(i);
             }
             out.flush();
+            System.out.println("flushed");
             out.close();
-            //将相应结果输出到控制台 模拟浏览器界面
-            System.out.println(new String(b));
 
+            return socket;
         } catch (IOException e) {
             e.printStackTrace();
         } catch (InterruptedException e) {
             e.printStackTrace();
         }
-        finally {
-            try {
-                socket.close();
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-        }
+        return null;
     }
 
     //delete方式访问http server
-    public static void doDelete(Socket socket,String uri){
+    public static Socket doDelete(Socket socket,String uri){
         //Socket socket = null;
         try {
             //socket = new Socket(host,port);
@@ -176,7 +178,9 @@ public class Client {
             sb.append("Accept-Encoding: gzip, deflate\r\n");
             sb.append("User-Agent: HTTPClient\r\n");
             sb.append("Host: localhost:8080\r\n");
-            sb.append("Connection: Keep-Alive\r\n");
+          //  sb.append("Connection: Keep-Alive\r\n");
+            sb.append("Connection: Close\r\n");
+
             //发送http请求
             OutputStream socketOut = socket.getOutputStream();
             socketOut.write(sb.toString().getBytes());
@@ -189,21 +193,23 @@ public class Client {
             socketIn.read(b);
             //将相应结果输出到控制台 模拟浏览器界面
             System.out.println(new String(b));
+            return socket;
         } catch (IOException e) {
             e.printStackTrace();
         } catch (InterruptedException e) {
             e.printStackTrace();
         }
-        finally {
+/*        finally {
             try {
                 socket.close();
 
             } catch (IOException e) {
                 e.printStackTrace();
             }
-        }
+        }*/
+        return null;
     }
-    public static void doPost(Socket socket, String uri) {
+    public static Socket doPost(Socket socket, String uri) {
         try {
             //socket = new Socket(host,port);
             //创建http请求  第一行 注意空格
@@ -214,7 +220,9 @@ public class Client {
             sb.append("Accept-Encoding: gzip, deflate\r\n");
             sb.append("User-Agent: HTTPClient\r\n");
             sb.append("Host: localhost:8080\r\n");
-            sb.append("Connection: Keep-Alive\r\n\r\n");
+            //sb.append("Connection: Keep-Alive\r\n\r\n");
+            sb.append("Connection: Close\r\n\r\n");
+
             String data = "data from client for post";
             sb.append(data);
             //发送http请求
@@ -229,6 +237,36 @@ public class Client {
             socketIn.read(b);
             //将相应结果输出到控制台 模拟浏览器界面
             System.out.println(new String(b));
+
+            return socket;
+        } catch (IOException e) {
+            e.printStackTrace();
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+        /*finally {
+            try {
+                socket.close();
+
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }*/
+        return null;
+    }
+
+
+    public static Socket doBye(Socket socket) {
+        try {
+            //socket = new Socket(host,port);
+            //创建http请求  第一行 注意空格
+            StringBuffer sb = new StringBuffer("BYE\r\n");
+
+            //发送http请求
+            OutputStream socketOut = socket.getOutputStream();
+            socketOut.write(sb.toString().getBytes());
+            Thread.sleep(2000);
+            return socket;
         } catch (IOException e) {
             e.printStackTrace();
         } catch (InterruptedException e) {
@@ -242,12 +280,13 @@ public class Client {
                 e.printStackTrace();
             }
         }
+        return null;
     }
     public String readMsg(InputStream ins) throws Exception {
         int value = ins.read();
         String str = "";
         while (value != 10) {
-            // 代表客户单不正常关闭
+            // 代表客户端不正常关闭
             if (value == -1) {
                 throw new Exception();
             }

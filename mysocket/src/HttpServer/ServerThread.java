@@ -60,7 +60,8 @@ public class ServerThread extends Thread{
             }
 
             //发送登录成功的结果给客户端
-            msg="OK\r\n";
+            //fixed bug             msg="OK\r\n";
+            msg="OK";
             sendMsg(ous, msg);
             // 校验成功
            // msg = "successfully connected";
@@ -71,42 +72,114 @@ public class ServerThread extends Thread{
         }
     }
 
+
+    public String readAndPrint() throws Exception{
+        int size = waitForClient();
+        //  System.out.println(size);
+        byte[] b = new byte[size];
+        ins.read(b);
+        String request = new String(b);
+        //打印http头
+        System.out.println(request);
+        System.out.println("----------------");
+        return request;
+    }
     public void run() {
         userLogin();
+
         try {
-            Thread.sleep(5*1000);
+            String request = readAndPrint();
+            if (isLongLink(request)) {
+//                socket.setKeepAlive(true);
+                while (true) {
+                    String backupRequest = new String(request);
+                    String typeUriHttp1 = request.substring(0,backupRequest.indexOf("\r\n"));
+                    String methods1 = typeUriHttp1.split(" ")[0];
+                    if (methods1.equals("BYE")) {
+                        System.out.println("== BYE");
+                        break;
+                    }
+                    mainProcess(request);
+                    request = readAndPrint();
+                }
+
+            } else {
+                mainProcess(request);
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
+        //有异常后统一将流关闭
+        try {
+            ins.close();
+            ous.close();
+            socket.close();
+            System.out.println("connection disclosed");
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
+    }
+
+    //等待客户端发送消息
+
+    int waitForClient() {
+        try {
+            Thread.sleep(3*1000);
             int size = ins.available();
             while (size == 0) {
-                Thread.sleep(3*1000);
+                Thread.sleep(2*1000);
                 size = ins.available();
             }
-        //  System.out.println(size);
-            byte[] b = new byte[size];
-            ins.read(b);
-            String request = new String(b);
-            System.out.println(request);
-            System.out.println("----------------");
+            return size;
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return -1;
+    }
+
+    boolean isLongLink(String requests) {
+        if (requests.indexOf("Connection: Close") != -1)
+        {
+            System.out.println("is not long link");
+            return false;
+
+        }
+        System.out.println("is long link");
+        return true;
+    }
+    public String getContentType(String uri) {
+        String contentType;
+        if(uri.indexOf("html")!=-1||uri.indexOf("htm")!=-1||uri.indexOf("txt")!=-1){
+            contentType = "text/html";
+        }else if(uri.indexOf("jpg")!=-1||uri.indexOf("jpeg")!=-1){
+            contentType = "image/jpeg";
+        }else if(uri.indexOf("gif")!=-1){
+            contentType = "image/gif";
+        }else contentType = "application/octet-stream";
+
+        return contentType;
+    }
+    public void mainProcess(String request) {
+        try {
+
             //解析请求方式、uri、协议，获取uri
             String typeUriHttp = request.substring(0,request.indexOf("\r\n"));
             System.out.println(typeUriHttp);
             String methods = typeUriHttp.split(" ")[0];
             String uri = typeUriHttp.split(" ")[1];
             System.out.println((uri));
+
             //简化处理响应头content-Type
-            String contentType;
-            if(uri.indexOf("html")!=-1||uri.indexOf("htm")!=-1||uri.indexOf("txt")!=-1){
-                contentType = "text/html";
-            }else if(uri.indexOf("jpg")!=-1||uri.indexOf("jpeg")!=-1){
-                contentType = "image/jpeg";
-            }else if(uri.indexOf("gif")!=-1){
-                contentType = "image/gif";
-            }else contentType = "application/octet-stream";
+            String contentType = getContentType(uri);
+
 
             //创建HTTP响应结果
             //创建响应协议、状态
             //405
             if (methods.equals("delete") || methods.equals("DELETE")) {
-                String httpStatus = "HTTP/1.jpg.1.jpg 405 Method Not Allowed\r\n";
+                String httpStatus = "HTTP/1.1 405 Method Not Allowed\r\n";
                 OutputStream socketOut = socket.getOutputStream();
                 socketOut.write(httpStatus.getBytes());
                 Thread.sleep(1000);
@@ -116,7 +189,7 @@ public class ServerThread extends Thread{
 
                 //演示500 Internal Server Error
                 if (uri.indexOf("500.txt") != -1) {
-                    String httpStatus = "HTTP/1.jpg.1.jpg 500 Internal Server Error\r\n";
+                    String httpStatus = "HTTP/1.1 500 Internal Server Error\r\n";
                     socketOut.write(httpStatus.getBytes());
                     socketOut.write(responseHeader.getBytes());
                 } else {
@@ -128,7 +201,7 @@ public class ServerThread extends Thread{
                             if (uri.indexOf("301.txt") != -1) {
                                 //演示301 moved permanently
                                 System.out.println("301 found");
-                                String httpStatus = "HTTP/1.jpg.1.jpg 301 Move permanently\r\n";
+                                String httpStatus = "HTTP/1.1 301 Move permanently\r\n";
                                 String newUri = "/NewResources" + uri + "\r\n";
                                 socketOut.write(httpStatus.getBytes());
                                 socketOut.write(responseHeader.getBytes());
@@ -138,7 +211,7 @@ public class ServerThread extends Thread{
                             }
                             if (uri.indexOf("302.txt") != -1) {
                                 //演示302 Found
-                                String httpStatus = "HTTP/1.jpg.1.jpg 302 Found\r\n";
+                                String httpStatus = "HTTP/1.1 302 Found\r\n";
                                 socketOut.write(httpStatus.getBytes());
                                 socketOut.write(responseHeader.getBytes());
                                 InputStream in = HttpServer.class.getResourceAsStream("/NewResources" + uri);
@@ -146,48 +219,36 @@ public class ServerThread extends Thread{
                             }
                             if (uri.indexOf("304.txt") != -1) {
                                 //演示304 Not Modified
-                                String httpStatus = "HTTP/1.jpg.1.jpg 304 Not Modified\r\n";
+                                String httpStatus = "HTTP/1.1 304 Not Modified\r\n";
                                 socketOut.write(httpStatus.getBytes());
                                 socketOut.write(responseHeader.getBytes());
                             }
                         } else {
-                            String httpStatus = "HTTP/1.jpg.1.jpg 404 Not Found\r\n";
+                            String httpStatus = "HTTP/1.1 404 Not Found\r\n";
                             socketOut.write(httpStatus.getBytes());
                             socketOut.write(responseHeader.getBytes());
                         }
                     } else{
-                        String httpStatus = "HTTP/1.jpg.1.jpg 200 OK\r\n";
+                        String httpStatus = "HTTP/1.1 200 OK\r\n";
                         //创建响应头
                         InputStream in = HttpServer.class.getResourceAsStream("/Resources" + uri);
                         //发送响应协议、状态码及响应头、正文
-                        //System.out.println(httpStatus);
-                        //System.out.println(responseHeader);
-                        socketOut.write(httpStatus.getBytes());
-                        socketOut.write(responseHeader.getBytes());
-                        int len = httpStatus.getBytes().length + responseHeader.getBytes().length;
-                        System.out.println("server head len"+len);
+                        byte httpStatusB[] = httpStatus.getBytes();
+                        byte responseHeaderB[] = responseHeader.getBytes();
+                        int len = httpStatusB.length + responseHeaderB.length;
+                        System.out.println("head len " + len);
+                        socketOut.write(len);
+                        socketOut.write(httpStatusB);
+                        socketOut.write(responseHeaderB);
                         writeFromFile(socketOut, in);
                     }
                 }
 
             }
-            //socket.close();
         } catch (Exception e) {
             System.out.println("The client was closed unexpectedly");
             e.printStackTrace();
         }
-        //有异常后统一将流关闭
-        try {
-            ins.close();
-            ous.close();
-            socket.close();
-            //将当前已经关闭的客户端从容器中移除
-         //   Myserver.list.remove(this);
-        } catch (IOException e) {
-            // TODO Auto-generated catch block
-            e.printStackTrace();
-        }
-
     }
 
     public void writeFromFile(OutputStream socketOut, InputStream in) throws IOException, InterruptedException {
